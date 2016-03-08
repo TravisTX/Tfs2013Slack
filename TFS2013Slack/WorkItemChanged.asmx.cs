@@ -49,32 +49,19 @@ namespace TFS2013Slack
             }
         }
 
-        private string GetTaskUrl(string areaPath, string workItemId)
-        {
-            return string.Format("https://tfs.datalinksoftware.com/tfs/DefaultCollection{0}/_workitems#_a=edit&id={1}", areaPath, workItemId);
-        }
-
-        private void PostCompletedTaskToSlack(string areaPath, string id, string title, string changedBy, string parentId, string parentTitle, string parentWorkItemType)
+        private void PostWorkItemToSlack(string areaPath, string id, string title, string changedBy, string newState, string parentId, string parentTitle, string parentWorkItemType)
         {
             var slackChannel = ConfigurationManager.AppSettings.Get("channel_" + areaPath);
             title = title.Replace(">", "_");
-            var taskUrl = GetTaskUrl(areaPath, id);
+            var taskUrl = string.Format("https://tfs.datalinksoftware.com/tfs/DefaultCollection{0}/_workitems#_a=edit&id={1}", areaPath, id);
             var message = "";
             if (parentId != null)
             {
-                var parentUrl = GetTaskUrl(areaPath, parentId);
+                var parentUrl = string.Format("https://tfs.datalinksoftware.com/tfs/DefaultCollection{0}/_workitems#_a=edit&id={1}", areaPath, parentId);
                 message += string.Format("<{0}|{1} {2}: {3}> >", parentUrl, parentWorkItemType, parentId, parentTitle);
             }
-            message += string.Format("<{0}|Task {1}: {2}> completed by {3}", taskUrl, id, title, changedBy);
+            message += string.Format("<{0}|Task {1}: {2}> changed by {3} to {4}", taskUrl, id, title, changedBy, newState);
 
-            PostMessageToSlack(message, slackChannel);
-        }
-        private void PostNewBugToSlack(string areaPath, string workItemId, string workItemTitle, string changedBy)
-        {
-            var slackChannel = ConfigurationManager.AppSettings.Get("channel_" + areaPath);
-            var taskUrl = GetTaskUrl(areaPath, workItemId);
-            string message = "";
-            message += string.Format("<{0}|Bug {1}: {2}> added by {3}", taskUrl, workItemId, workItemTitle, changedBy);
             PostMessageToSlack(message, slackChannel);
         }
 
@@ -135,23 +122,15 @@ namespace TFS2013Slack
             {
                 // state has changed
                 var parent = GetParent(eventData.WorkItemId);
-                PostCompletedTaskToSlack(eventData.AreaPath, eventData.WorkItemId, eventData.WorkItemTitle, eventData.ChangedBy, parent.Item1, parent.Item2, parent.Item3);
-            }
-
-            else if (eventData.WorkItemType == "Bug" && String.IsNullOrWhiteSpace(oldState) && state == "New")
-            {
-                // new bug was inserted
-                PostNewBugToSlack(eventData.AreaPath, eventData.WorkItemId, eventData.WorkItemTitle, eventData.ChangedBy);
+                PostWorkItemToSlack(eventData.AreaPath, eventData.WorkItemId, eventData.WorkItemTitle, eventData.ChangedBy, eventData.State, parent.Item1, parent.Item2, parent.Item3);
             }
         }
-
 
         [WebMethod]
         public string HelloWorld()
         {
             //var parent = GetParent("18657");
-            //PostCompletedTaskToSlack("\\CareBookScrum", "9283", "my cool task", "travis collins", "9260", "parentTitle", "PBI");
-            //PostNewBugToSlack("\\CareBookScrum", "9283", "my cool task", "travis collins");
+            //PostWorkItemToSlack("\\CareBookScrum", "9283", "my cool task", "travis collins", "done", "9260", "parentTitle", "PBI");
             return "Hello World";
         }
     }
