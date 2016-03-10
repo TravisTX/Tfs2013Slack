@@ -57,7 +57,8 @@ namespace TFS2013Slack
         private void PostCompletedTaskToSlack(string areaPath, string id, string title, string changedBy, string parentId, string parentTitle, string parentWorkItemType)
         {
             var slackChannel = ConfigurationManager.AppSettings.Get("channel_" + areaPath);
-            title = title.Replace(">", "_");
+            title = SanitizeTitle(title);
+            parentTitle = SanitizeTitle(parentTitle);
             var taskUrl = GetTaskUrl(areaPath, id);
             var message = "";
             if (parentId != null)
@@ -73,6 +74,7 @@ namespace TFS2013Slack
         {
             var slackChannel = ConfigurationManager.AppSettings.Get("channel_" + areaPath);
             var taskUrl = GetTaskUrl(areaPath, workItemId);
+            workItemTitle = SanitizeTitle(workItemTitle);
             string message = "";
             message += string.Format("<{0}|Bug {1}: {2}> added by {3}", taskUrl, workItemId, workItemTitle, changedBy);
             PostMessageToSlack(message, slackChannel);
@@ -123,6 +125,11 @@ namespace TFS2013Slack
                 workItemType = workItemType.Replace("Product Backlog Item", "PBI");
                 return new Tuple<string, string, string>(id, name, workItemType);
             }
+        }
+
+        private string SanitizeTitle(string title)
+        {
+            return title.Replace(">", "_");
         }
 
         private void HandleEvent(string eventXml)
